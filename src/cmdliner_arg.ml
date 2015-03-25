@@ -312,10 +312,10 @@ let man_format =
 let stdopt_version ~docs =
   value & flag & info ["version"] ~docs ~doc:"Show version information."
 
-let stdopt_help ~docs =
+let stdopt_help ~docs default =
   let doc = man_fmts_doc "this help" in
   let docv = man_fmt_docv in
-  value & opt ~vopt:(Some `Auto) (some man_fmts_enum) None &
+  value & opt ~vopt:(Some default) (some man_fmts_enum) None &
   info ["help"] ~docv ~docs ~doc
 
 (* Predefined converters. *)

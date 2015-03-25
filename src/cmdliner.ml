@@ -95,7 +95,7 @@ module Term = struct
   type 'a result =
     [ `Ok of 'a | `Error of [`Parse | `Term | `Exn ] | `Version | `Help ]
 
-  let add_stdopts ei =
+  let add_stdopts ei def_fmt =
     let docs = Cmdliner_info.(term_stdopts_docs @@ eval_term ei) in
     let vargs, vers = match Cmdliner_info.(term_version @@ eval_main ei) with
     | None -> Cmdliner_info.Args.empty, None
@@ -103,7 +103,7 @@ module Term = struct
         let args, _ as vers = Cmdliner_arg.stdopt_version ~docs in
         args, Some vers
     in
-    let help = Cmdliner_arg.stdopt_help ~docs in
+    let help = Cmdliner_arg.stdopt_help ~docs def_fmt in
     let args = Cmdliner_info.Args.union vargs (fst help) in
     let term = Cmdliner_info.(term_add_args (eval_term ei) args) in
     help, vers, Cmdliner_info.eval_with_term ei term
@@ -132,8 +132,8 @@ module Term = struct
             | Ok true -> Some (Error (`Std_version))
             | Error _ as err -> Some err
 
-  let term_eval ~catch ei f args =
-    let help, version, ei = add_stdopts ei in
+  let term_eval fmt ~catch ei f args =
+    let help, version, ei = add_stdopts ei fmt in
     let term_args = Cmdliner_info.(term_args @@ eval_term ei) in
     let res = match Cmdliner_cline.create term_args args with
     | Error (e, cl) ->
@@ -148,8 +148,8 @@ module Term = struct
     in
     ei, res
 
-  let term_eval_peek_opts ei f args =
-    let help, version, ei = add_stdopts ei in
+  let term_eval_peek_opts fmt ei f args =
+    let help, version, ei = add_stdopts ei fmt in
     let term_args = Cmdliner_info.(term_args @@ eval_term ei) in
     let v, ret = match Cmdliner_cline.create ~peek_opts:true term_args args with
     | Error (e, cl) ->
@@ -185,7 +185,7 @@ module Term = struct
           Cmdliner_info.eval_with_term ei cmd
         with Not_found -> invalid_arg (err_help cmd)
     in
-    let _, _, ei = add_stdopts ei (* may not be the originally eval'd term *) in
+    let _, _, ei = add_stdopts ei fmt (* may not be the originally eval'd term *) in
     Cmdliner_docgen.pp_man ~errs:err_ppf fmt help_ppf ei
 
   let do_result help_ppf err_ppf ei = function
@@ -214,11 +214,12 @@ module Term = struct
   let eval
       ?help:(help_ppf = Format.std_formatter)
       ?err:(err_ppf = Format.err_formatter)
-      ?(catch = true) ?(env = env_default) ?(argv = Sys.argv) ((al, f), ti) =
+      ?(catch = true) ?(env = env_default) ?(argv = Sys.argv) ?(fmt = `Auto)
+      ((al, f), ti) =
     let term = Cmdliner_info.term_add_args ti al in
     let ei = Cmdliner_info.eval ~term ~main:term ~choices:[] ~env in
     let args = remove_exec argv in
-    let ei, res = term_eval ~catch ei f args in
+    let ei, res = term_eval fmt ~catch ei f args in
     do_result help_ppf err_ppf ei res
 
   let choose_term main choices = function
@@ -248,7 +249,7 @@ module Term = struct
   let eval_choice
       ?help:(help_ppf = Format.std_formatter)
       ?err:(err_ppf = Format.err_formatter)
-      ?(catch = true) ?(env = env_default) ?(argv = Sys.argv)
+      ?(catch = true) ?(env = env_default) ?(argv = Sys.argv) ?(fmt = `Auto)
       main choices =
     let to_term_f ((al, f), ti) = Cmdliner_info.term_add_args ti al, f in
     let choices_f = List.rev_map to_term_f choices in
@@ -262,16 +263,16 @@ module Term = struct
         `Error `Parse
     | Ok ((chosen, f), args) ->
         let ei = Cmdliner_info.eval ~term:chosen ~main ~choices ~env in
-        let ei, res = term_eval ~catch ei f args in
+        let ei, res = term_eval fmt ~catch ei f args in
         do_result help_ppf err_ppf ei res
 
   let eval_peek_opts
       ?(version_opt = false) ?(env = env_default) ?(argv = Sys.argv)
-      ((args, f) : 'a t) =
+      ?(fmt = `Auto) ((args, f) : 'a t) =
     let version = if version_opt then Some "dummy" else None in
     let term = Cmdliner_info.term ~args ?version "dummy" in
     let ei = Cmdliner_info.eval ~term ~main:term ~choices:[] ~env  in
-    (term_eval_peek_opts ei f (remove_exec argv) :> 'a option * 'a result)
+    (term_eval_peek_opts fmt ei f (remove_exec argv) :> 'a option * 'a result)
 
   (* Exits *)
 

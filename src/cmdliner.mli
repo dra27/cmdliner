@@ -353,8 +353,8 @@ module Term : sig
 
   val eval :
     ?help:Format.formatter -> ?err:Format.formatter -> ?catch:bool ->
-    ?env:(string -> string option) -> ?argv:string array -> ('a t * info) ->
-    'a result
+    ?env:(string -> string option) -> ?argv:string array ->
+    ?fmt:Manpage.format -> ('a t * info) -> 'a result
   (** [eval help err catch argv (t,i)]  is the evaluation result
       of [t] with command line arguments [argv] (defaults to {!Sys.argv}).
 
@@ -366,13 +366,16 @@ module Term : sig
       (defaults to {!Format.std_formatter}). [err] is the formatter
       used to print error messages (defaults to {!Format.err_formatter}).
 
+      [fmt] specified the default argument for --help ([`Auto]).
+
       [env] is used for environment variable lookup, the default
       uses {!Sys.getenv}. *)
 
   val eval_choice :
     ?help:Format.formatter -> ?err:Format.formatter -> ?catch:bool ->
     ?env:(string -> string option) -> ?argv:string array ->
-    'a t * info -> ('a t * info) list -> 'a result
+    ?fmt:Manpage.format -> 'a t * info -> ('a t * info) list ->
+    'a result
   (** [eval_choice help err catch argv (t,i) choices] is like {!eval}
       except that if the first argument on the command line is not an option
       name it will look in [choices] for a term whose information has this
@@ -384,7 +387,8 @@ module Term : sig
 
   val eval_peek_opts :
     ?version_opt:bool -> ?env:(string -> string option) ->
-    ?argv:string array -> 'a t -> 'a option * 'a result
+    ?argv:string array -> ?fmt:Manpage.format -> 'a t ->
+    'a option * 'a result
   (** [eval_peek_opts version_opt argv t] evaluates [t], a term made
       of optional arguments only, with the command line [argv]
       (defaults to {!Sys.argv}). In this evaluation, unknown optional
