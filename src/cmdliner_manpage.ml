@@ -447,6 +447,11 @@ let pp_to_pager print ppf v =
     let cmds = try (Sys.getenv "MANPAGER") :: cmds with Not_found -> cmds in
     find_cmd cmds
   in
+  let lessenv =
+    try
+      ignore (Sys.getenv "LESS"); ""
+    with Not_found -> "LESS=FRX "
+  in
   match pager with
   | None -> print `Plain ppf v
   | Some pager ->
@@ -462,7 +467,7 @@ let pp_to_pager print ppf v =
           | Some f ->
               (* TODO use -Tutf8, but annoyingly maps U+002D to U+2212. *)
               let xroff = if c = "groff" then c ^ " -Tascii -P-c" else c in
-              Some (strf "%s < %s | %s" xroff f pager)
+              Some (strf "%s < %s | %s%s" xroff f lessenv pager)
           end
       in
       match cmd with
